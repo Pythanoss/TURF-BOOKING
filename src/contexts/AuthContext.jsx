@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
@@ -15,60 +16,102 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is already logged in (from localStorage)
+  // Check for existing session on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('turfBookingUser');
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
-        setUser(userData);
-        setIsLoggedIn(true);
-      } catch (error) {
-        console.error('Error parsing saved user data:', error);
-        localStorage.removeItem('turfBookingUser');
+    checkUser();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          setUser(formatUser(session.user));
+          setIsLoggedIn(true);
+        } else {
+          setUser(null);
+          setIsLoggedIn(false);
+        }
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Mock login function
-  // TODO: Integrate Google OAuth with Supabase
-  // Example: const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google' })
-  const login = async (provider = 'google') => {
-    setLoading(true);
-
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Mock user data
-    const mockUser = {
-      name: 'Rahul Sharma',
-      email: 'rahul@example.com',
-      phone: '+91 98765 43210',
-      avatar: null,
-      provider: provider,
-    };
-
-    setUser(mockUser);
-    setIsLoggedIn(true);
-    localStorage.setItem('turfBookingUser', JSON.stringify(mockUser));
-    setLoading(false);
-
-    return { success: true, user: mockUser };
+  // Check if user is already logged in
+  const checkUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(formatUser(session.user));
+        setIsLoggedIn(true);
+      }
+    } catch (error) {
+      console.error('Error checking user session:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Logout function
-  const logout = () => {
-    setUser(null);
-    setIsLoggedIn(false);
-    localStorage.removeItem('turfBookingUser');
+  // Format Supabase user to app user format
+  const formatUser = (supabaseUser) => {
+    return {
+      id: supabaseUser.id,
+      name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
+      email: supabaseUser.email,
+      avatar: supabaseUser.user_metadata?.avatar_url || null,
+      provider: supabaseUser.app_metadata?.provider || 'google',
+    };
+  };
+
+  // Login with Google OAuth
+  const login = async () => {
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoading(false);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Logout
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      setUser(null);
+      setIsLoggedIn(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   // Update user profile
-  const updateProfile = (updates) => {
-    const updatedUser = { ...user, ...updates };
-    setUser(updatedUser);
-    localStorage.setItem('turfBookingUser', JSON.stringify(updatedUser));
+  const updateProfile = async (updates) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: updates,
+      });
+
+      if (error) throw error;
+      setUser(formatUser(data.user));
+
+      return { success: true };
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return { success: false, error: error.message };
+    }
   };
 
   const value = {

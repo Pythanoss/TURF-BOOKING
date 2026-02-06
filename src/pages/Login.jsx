@@ -1,23 +1,34 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Chrome, Mail, Phone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Chrome } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isLoggedIn } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Redirect if already logged in
+  if (isLoggedIn) {
+    navigate('/', { replace: true });
+    return null;
+  }
 
   const handleGoogleLogin = async () => {
-    // TODO: Integrate Google OAuth with Supabase
-    // Example: const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google' })
-
     setIsLoading(true);
+    setError(null);
 
-    const result = await login('google');
+    try {
+      const result = await login();
 
-    if (result.success) {
-      navigate('/', { replace: true });
+      if (result.success) {
+        navigate('/', { replace: true });
+      } else {
+        setError(result.error || 'Failed to sign in. Please try again.');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
     }
 
     setIsLoading(false);
@@ -37,14 +48,21 @@ const Login = () => {
 
         {/* Login Card */}
         <div className="card">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-          <p className="text-gray-600 mb-6">Login to continue booking</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome</h2>
+          <p className="text-gray-600 mb-6">Sign in to continue booking</p>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
 
           {/* Google Login Button */}
           <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-gray-300 hover:border-green-500 text-gray-700 font-semibold rounded-lg transition-all mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-gray-300 hover:border-green-500 hover:bg-green-50 text-gray-700 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>
@@ -53,71 +71,22 @@ const Login = () => {
               </>
             ) : (
               <>
-                <Chrome size={20} className="text-green-600" />
+                <Chrome size={24} className="text-green-600" />
                 Continue with Google
               </>
             )}
           </button>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">or</span>
-            </div>
-          </div>
-
-          {/* Email Input (Disabled for demo) */}
-          <div className="mb-4">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-              <Mail size={16} />
-              Email Address
-            </label>
-            <input
-              type="email"
-              placeholder="your@email.com"
-              disabled
-              className="input-field bg-gray-100 cursor-not-allowed"
-            />
-          </div>
-
-          {/* Phone Input (Disabled for demo) */}
-          <div className="mb-6">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-              <Phone size={16} />
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              placeholder="+91 98765 43210"
-              disabled
-              className="input-field bg-gray-100 cursor-not-allowed"
-            />
-          </div>
-
-          {/* Continue Button (Disabled for demo) */}
-          <button
-            disabled
-            className="btn-disabled w-full mb-4"
-          >
-            Continue
-          </button>
-
-          {/* Signup Link */}
-          <p className="text-center text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-green-600 hover:text-green-700 font-semibold">
-              Sign up
-            </Link>
+          {/* Terms */}
+          <p className="text-xs text-gray-500 text-center mt-6">
+            By continuing, you agree to our Terms of Service and Privacy Policy
           </p>
         </div>
 
-        {/* Demo Notice */}
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800 text-center">
-            <span className="font-semibold">Demo Mode:</span> Click "Continue with Google" to login with mock data
+        {/* Info Notice */}
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800 text-center">
+            Sign in with your Google account to book turf slots instantly
           </p>
         </div>
       </div>

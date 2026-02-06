@@ -6,7 +6,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 // User Pages
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 import BookingConfirmation from './pages/BookingConfirmation';
 import MyBookings from './pages/MyBookings';
 import Profile from './pages/Profile';
@@ -21,10 +20,18 @@ function App() {
       <BookingProvider>
         <Router>
           <Routes>
-            {/* User Routes */}
-            <Route path="/" element={<Home />} />
+            {/* Public Routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+
+            {/* Protected User Routes - Require Login */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Protected User Routes */}
             <Route
