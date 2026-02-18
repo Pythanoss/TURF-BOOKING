@@ -16,15 +16,14 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check for existing session on mount
   useEffect(() => {
     checkUser();
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {
-          setUser(formatUser(session.user));
+          const userData = await buildUser(session.user);
+          setUser(userData);
           setIsLoggedIn(true);
         } else {
           setUser(null);
@@ -37,12 +36,12 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Check if user is already logged in
   const checkUser = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        setUser(formatUser(session.user));
+        const userData = await buildUser(session.user);
+        setUser(userData);
         setIsLoggedIn(true);
       }
     } catch (error) {
@@ -52,29 +51,37 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Format Supabase user to app user format
-  const formatUser = (supabaseUser) => {
+  // Builds the app-level user object, merging auth metadata + profiles table (for phone)
+  const buildUser = async (supabaseUser) => {
+    let phone = null;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('id', supabaseUser.id)
+        .maybeSingle();
+      phone = profile?.phone || null;
+    } catch {
+      // Non-fatal — phone simply stays null
+    }
+
     return {
       id: supabaseUser.id,
       name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
       email: supabaseUser.email,
       avatar: supabaseUser.user_metadata?.avatar_url || null,
+      phone,
       provider: supabaseUser.app_metadata?.provider || 'google',
     };
   };
 
-  // Login with Google OAuth
   const login = async () => {
     setLoading(true);
-
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        },
+        options: { redirectTo: `${window.location.origin}/` },
       });
-
       if (error) throw error;
       return { success: true };
     } catch (error) {
@@ -84,12 +91,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout
   const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
+      await supabase.auth.signOut();
       setUser(null);
       setIsLoggedIn(false);
     } catch (error) {
@@ -97,16 +101,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Update user profile
+  // Updates phone/name in the profiles table and refreshes the local user state
   const updateProfile = async (updates) => {
     try {
-      const { data, error } = await supabase.auth.updateUser({
-        data: updates,
-      });
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          ...(updates.name  && { name: updates.name }),
+          ...(updates.phone && { phone: updates.phone }),
+        })
+        .eq('id', user.id);
 
       if (error) throw error;
-      setUser(formatUser(data.user));
 
+      setUser(prev => ({ ...prev, ...updates }));
       return { success: true };
     } catch (error) {
       console.error('Update profile error:', error);
@@ -114,14 +124,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const value = {
-    user,
-    isLoggedIn,
-    loading,
-    login,
-    logout,
-    updateProfile,
-  };
+  const value = { user, isLoggedIn, loading, login, logout, updateProfile };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

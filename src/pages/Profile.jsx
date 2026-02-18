@@ -57,10 +57,10 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      <header className="bg-green-600 text-white shadow-md">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold">Profile</h1>
-          <p className="text-green-100 text-sm">Manage your account</p>
+      <header className="header-gradient text-white shadow-lg">
+        <div className="container mx-auto px-4 py-5">
+          <h1 className="text-2xl font-extrabold">Profile</h1>
+          <p className="text-emerald-200 text-xs mt-0.5">Manage your account</p>
         </div>
       </header>
 

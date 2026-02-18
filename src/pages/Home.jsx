@@ -1,121 +1,275 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar, Sun, Sunrise, Sunset, Moon, CheckCircle2, ShoppingCart, X, RefreshCw } from 'lucide-react';
+import { addDays, format } from 'date-fns';
 import BottomNav from '../components/BottomNav';
 import InstallPrompt from '../components/InstallPrompt';
 import { useBooking } from '../contexts/BookingContext';
-import { generateTimeSlots } from '../data/mockSlots';
+import { getSlotGroups } from '../data/mockSlots';
 import { formatDate, formatDateForInput, getToday } from '../utils/dateUtils';
-import { formatPrice, getSlotStatusColor } from '../utils/priceUtils';
+import { formatPrice, calculateAdvance } from '../utils/priceUtils';
+import { supabase } from '../lib/supabase';
+
+const GROUP_META = {
+  Morning:   { Icon: Sunrise, color: 'text-amber-500',  bg: 'bg-amber-50' },
+  Afternoon: { Icon: Sun,     color: 'text-yellow-500', bg: 'bg-yellow-50' },
+  Evening:   { Icon: Sunset,  color: 'text-orange-500', bg: 'bg-orange-50' },
+  Night:     { Icon: Moon,    color: 'text-indigo-500', bg: 'bg-indigo-50' },
+};
 
 const Home = () => {
   const navigate = useNavigate();
-  const { selectedDate, setSelectedDate, setSelectedSlot } = useBooking();
-  const [slots, setSlots] = useState(generateTimeSlots(selectedDate));
+  const {
+    selectedDate, setSelectedDate,
+    selectedSlots, toggleSlotSelection, clearSelectedSlots, getTotalPrice, isSlotSelected,
+  } = useBooking();
+
+  const [slotGroups, setSlotGroups] = useState(getSlotGroups(selectedDate, []));
+  const [slotsLoading, setSlotsLoading] = useState(false);
+
+  const today = getToday();
+
+  // ─── Fetch real slot availability from Supabase ─────────────
+  const fetchBookedHours = useCallback(async (date) => {
+    setSlotsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_booked_hours', { check_date: date });
+      if (error) throw error;
+      const bookedHours = (data || []).map(row => row.start_hour);
+      setSlotGroups(getSlotGroups(date, bookedHours));
+    } catch (err) {
+      console.error('Failed to fetch slot availability:', err);
+      // Graceful fallback — show all slots as available
+      setSlotGroups(getSlotGroups(date, []));
+    } finally {
+      setSlotsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBookedHours(selectedDate);
+  }, [selectedDate, fetchBookedHours]);
+
+  // ─── Date selection ──────────────────────────────────────────
+  const quickDates = [
+    { label: 'Today',    date: today },
+    { label: 'Tomorrow', date: addDays(today, 1) },
+    { label: format(addDays(today, 2), 'EEE d'), date: addDays(today, 2) },
+    { label: format(addDays(today, 3), 'EEE d'), date: addDays(today, 3) },
+  ];
+
+  const handleQuickDate = (date) => {
+    setSelectedDate(format(date, 'yyyy-MM-dd'));
+    clearSelectedSlots();
+  };
 
   const handleDateChange = (e) => {
-    const newDate = e.target.value;
-    setSelectedDate(newDate);
-    setSlots(generateTimeSlots(newDate));
+    setSelectedDate(e.target.value);
+    clearSelectedSlots();
   };
 
-  const handleSlotClick = (slot) => {
-    if (slot.status === 'available') {
-      setSelectedSlot(slot);
-      navigate('/booking', { state: { slot } });
-    }
+  const handleProceedToBook = () => {
+    navigate('/booking', { state: { slots: selectedSlots } });
   };
+
+  const totalPrice    = getTotalPrice();
+  const advanceAmount = calculateAdvance(totalPrice);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-36">
       {/* Header */}
-      <header className="bg-green-600 text-white shadow-md sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold">Turf Booking</h1>
-          <p className="text-green-100 text-sm">Book your slot in seconds</p>
+      <header className="header-gradient text-white sticky top-0 z-10 shadow-lg">
+        <div className="container mx-auto px-4 pt-5 pb-6">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <p className="text-emerald-300 text-xs font-semibold tracking-widest uppercase">Welcome</p>
+              <h1 className="text-2xl font-extrabold tracking-tight">TurfBook</h1>
+            </div>
+            <div className="w-11 h-11 bg-white/15 rounded-2xl flex items-center justify-center border border-white/20">
+              <span className="text-2xl">⚽</span>
+            </div>
+          </div>
+          <p className="text-emerald-200 text-sm mt-1">Pick your slots and get on the field</p>
         </div>
       </header>
 
       {/* Date Selector */}
-      <div className="container mx-auto px-4 py-4">
-        <div className="card">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-            <CalendarIcon size={18} />
-            Select Date
-          </label>
-          <input
-            type="date"
-            value={selectedDate}
-            min={formatDateForInput(getToday())}
-            onChange={handleDateChange}
-            className="input-field"
-          />
-          <p className="text-sm text-gray-500 mt-2">
-            Showing slots for: <span className="font-semibold">{formatDate(selectedDate)}</span>
+      <div className="container mx-auto px-4 -mt-3 mb-5">
+        <div className="card shadow-md border-0">
+          <div className="flex gap-2 mb-3 overflow-x-auto pb-1 scrollbar-hide">
+            {quickDates.map(({ label, date }) => {
+              const formatted = format(date, 'yyyy-MM-dd');
+              const isActive  = selectedDate === formatted;
+              return (
+                <button
+                  key={label}
+                  onClick={() => handleQuickDate(date)}
+                  className={`chip-date flex-shrink-0 ${isActive ? 'chip-date-active' : 'chip-date-inactive'}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Calendar size={16} className="text-emerald-600 flex-shrink-0" />
+            <input
+              type="date"
+              value={selectedDate}
+              min={formatDateForInput(today)}
+              onChange={handleDateChange}
+              className="input-field text-sm"
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-2 pl-6">
+            Slots for: <span className="font-semibold text-gray-600">{formatDate(selectedDate)}</span>
           </p>
         </div>
       </div>
 
-      {/* Time Slots Grid */}
-      <div className="container mx-auto px-4 pb-4">
-        <h2 className="text-lg font-bold text-gray-900 mb-3">Available Slots</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {slots.map((slot) => (
-            <button
-              key={slot.id}
-              onClick={() => handleSlotClick(slot)}
-              disabled={slot.status !== 'available'}
-              className={`card border-2 text-left transition-all ${getSlotStatusColor(slot.status)} ${slot.status === 'available'
-                  ? 'hover:border-green-500 hover:shadow-lg cursor-pointer'
-                  : 'cursor-not-allowed opacity-75'
-                }`}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="font-bold text-lg">{slot.time}</p>
-                  <p className="text-sm text-gray-600">1 Hour Duration</p>
-                </div>
-                <span className={`badge ${slot.status === 'available'
-                    ? 'badge-success'
-                    : slot.status === 'booked'
-                      ? 'badge-danger'
-                      : 'bg-gray-200 text-gray-700'
-                  }`}>
-                  {slot.status === 'available' ? 'Available' : slot.status === 'booked' ? 'Booked' : 'Closed'}
-                </span>
-              </div>
-
-              {slot.status === 'available' && (
-                <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
-                  <span className="text-2xl font-bold text-green-600">
-                    {formatPrice(slot.price)}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    30% advance
-                  </span>
-                </div>
-              )}
-
-              {slot.status === 'booked' && (
-                <p className="text-sm text-red-600 mt-2 font-medium">
-                  This slot is already booked
-                </p>
-              )}
-
-              {slot.status === 'closed' && (
-                <p className="text-sm text-gray-600 mt-2 font-medium">
-                  Slot not available
-                </p>
-              )}
-            </button>
-          ))}
+      {/* Legend */}
+      <div className="container mx-auto px-4 mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-4 text-xs text-gray-500">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Available
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-700 inline-block ring-2 ring-emerald-400 ring-offset-1" /> Selected
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> Booked
+          </span>
         </div>
+
+        {/* Refresh button */}
+        <button
+          onClick={() => fetchBookedHours(selectedDate)}
+          disabled={slotsLoading}
+          className="p-1.5 text-gray-400 hover:text-emerald-600 transition-colors"
+          title="Refresh availability"
+        >
+          <RefreshCw size={14} className={slotsLoading ? 'animate-spin' : ''} />
+        </button>
       </div>
 
-      {/* Install Prompt */}
+      {/* Slot Groups */}
+      <div className="container mx-auto px-4 space-y-6 pb-4">
+        {slotsLoading ? (
+          // Loading skeleton
+          <div className="space-y-6">
+            {['Morning', 'Afternoon', 'Evening', 'Night'].map(g => (
+              <div key={g}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />
+                  <div className="w-24 h-4 bg-gray-100 rounded animate-pulse" />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          slotGroups.map((group) => {
+            const { Icon, color, bg } = GROUP_META[group.label];
+            const availableCount = group.slots.filter(s => s.status === 'available').length;
+
+            return (
+              <div key={group.label}>
+                {/* Group header */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`p-1.5 ${bg} rounded-lg`}>
+                    <Icon size={16} className={color} />
+                  </div>
+                  <span className="font-bold text-gray-800 text-sm">{group.label}</span>
+                  <span className="text-gray-400 text-xs">{group.timeRange}</span>
+                  <span className="ml-auto text-xs text-gray-400">{availableCount} free</span>
+                </div>
+
+                {/* Slot grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {group.slots.map((slot) => {
+                    const isSelected  = isSlotSelected(slot.id);
+                    const isAvailable = slot.status === 'available';
+                    const isBooked    = slot.status === 'booked';
+
+                    return (
+                      <button
+                        key={slot.id}
+                        onClick={() => isAvailable && toggleSlotSelection(slot)}
+                        disabled={!isAvailable}
+                        className={`slot-card ${
+                          isSelected  ? 'slot-selected'  :
+                          isBooked    ? 'slot-booked'    :
+                          isAvailable ? 'slot-available' : 'slot-closed'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-1">
+                          <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-white' : 'text-gray-800'}`}>
+                            {slot.startTime}
+                          </span>
+                          {isSelected && <CheckCircle2 size={14} className="text-white flex-shrink-0 -mt-0.5" />}
+                          {isBooked    && <span className="text-xs text-red-500 font-medium">Full</span>}
+                        </div>
+
+                        <p className={`text-xs mb-2 ${isSelected ? 'text-emerald-100' : 'text-gray-400'}`}>
+                          to {slot.endTime}
+                        </p>
+
+                        {isAvailable ? (
+                          <p className={`text-sm font-extrabold ${isSelected ? 'text-white' : 'text-emerald-600'}`}>
+                            {formatPrice(slot.price)}
+                          </p>
+                        ) : (
+                          <p className="text-xs font-medium text-red-400">Booked</p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
       <InstallPrompt />
 
-      {/* Bottom Navigation */}
+      {/* Floating selection bar */}
+      {selectedSlots.length > 0 && (
+        <div className="fixed bottom-16 left-0 right-0 z-40 px-4 pb-2">
+          <div
+            className="flex items-center gap-3 rounded-2xl px-4 py-3 shadow-2xl"
+            style={{ background: 'linear-gradient(135deg, #064e3b, #059669)' }}
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-bold">
+                {selectedSlots.length} slot{selectedSlots.length > 1 ? 's' : ''} selected
+              </p>
+              <p className="text-emerald-200 text-xs truncate">
+                Pay now: {formatPrice(advanceAmount)} · Total: {formatPrice(totalPrice)}
+              </p>
+            </div>
+            <button
+              onClick={clearSelectedSlots}
+              className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex-shrink-0"
+            >
+              <X size={15} className="text-white" />
+            </button>
+            <button
+              onClick={handleProceedToBook}
+              className="flex items-center gap-2 bg-white text-emerald-700 font-bold text-sm px-4 py-2 rounded-full hover:bg-emerald-50 transition-colors flex-shrink-0 shadow-md"
+            >
+              <ShoppingCart size={15} />
+              Book Now
+            </button>
+          </div>
+        </div>
+      )}
+
       <BottomNav />
     </div>
   );
