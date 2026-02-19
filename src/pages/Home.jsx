@@ -82,14 +82,14 @@ const Home = () => {
         <div className="container mx-auto px-4 pt-5 pb-6">
           <div className="flex items-center justify-between mb-1">
             <div>
-              <p className="text-emerald-300 text-xs font-semibold tracking-widest uppercase">Welcome</p>
-              <h1 className="text-2xl font-extrabold tracking-tight">TurfBook</h1>
+              <p className="text-white text-xs font-semibold tracking-widest uppercase">Welcome</p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-white/90">TurfBook</h1>
             </div>
-            <div className="w-11 h-11 bg-white/15 rounded-2xl flex items-center justify-center border border-white/20">
-              <span className="text-2xl">⚽</span>
-            </div>
+            {/* <div className="w-11 h-11 bg-white/15 rounded-xl flex items-center justify-center border border-white/20">
+              <span className="text-6xl">⚽</span>
+            </div> */}
           </div>
-          <p className="text-emerald-200 text-sm mt-1">Pick your slots and get on the field</p>
+          <p className="text-white text-sm mt-1">Pick your slots and get on the field</p>
         </div>
       </header>
 
@@ -243,13 +243,13 @@ const Home = () => {
         <div className="fixed bottom-16 left-0 right-0 z-40 px-4 pb-2">
           <div
             className="flex items-center gap-3 rounded-2xl px-4 py-3 shadow-2xl"
-            style={{ background: 'linear-gradient(135deg, #064e3b, #059669)' }}
+            style={{ background: 'linear-gradient(135deg, #14532d, #166534)' }}
           >
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-bold">
                 {selectedSlots.length} slot{selectedSlots.length > 1 ? 's' : ''} selected
               </p>
-              <p className="text-emerald-200 text-xs truncate">
+              <p className="text-white/70 text-xs truncate">
                 Pay now: {formatPrice(advanceAmount)} · Total: {formatPrice(totalPrice)}
               </p>
             </div>

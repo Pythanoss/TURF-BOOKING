@@ -137,7 +137,7 @@ export const BookingProvider = ({ children }) => {
           total_price:           bookingData.totalPrice,
           advance_paid:          bookingData.advancePaid,
           balance_due:           bookingData.balanceDue,
-          status:                'advance_paid',
+          status:                toDbStatus(bookingData.status || 'Advance Paid'),
           razorpay_payment_id:   bookingData.razorpayPaymentId || null,
         })
         .select()

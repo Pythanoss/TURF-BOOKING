@@ -60,7 +60,7 @@ const Profile = () => {
       <header className="header-gradient text-white shadow-lg">
         <div className="container mx-auto px-4 py-5">
           <h1 className="text-2xl font-extrabold">Profile</h1>
-          <p className="text-emerald-200 text-xs mt-0.5">Manage your account</p>
+          <p className="text-white/70 text-xs mt-0.5">Manage your account</p>
         </div>
       </header>
 

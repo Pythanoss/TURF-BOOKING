@@ -16,6 +16,7 @@ const BookingConfirmation = () => {
   const [slots, setSlots] = useState([]);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMode, setPaymentMode] = useState('advance'); // 'advance' | 'full'
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -42,6 +43,7 @@ const BookingConfirmation = () => {
   const advanceAmount = calculateAdvance(totalPrice);
   const balanceAmount = calculateBalance(totalPrice, advanceAmount);
   const slotDate = slots[0]?.date;
+  const payAmount = paymentMode === 'full' ? totalPrice : advanceAmount;
 
   const handleProceedToPayment = () => {
     if (!agreeToTerms) {
@@ -52,6 +54,7 @@ const BookingConfirmation = () => {
   };
 
   const handlePaymentSuccess = async (paymentId) => {
+    const isFullPay = paymentMode === 'full';
     const bookingData = {
       date:              formatDate(slotDate),
       fullDate:          slotDate,
@@ -59,10 +62,10 @@ const BookingConfirmation = () => {
       slots:             slots.map(s => s.time),
       slotsData:         slots,           // raw slot objects — needed for booking_slots DB insert
       slotCount:         slots.length,
-      status:            'Advance Paid',
-      advancePaid:       advanceAmount,
+      status:            isFullPay ? 'Fully Paid' : 'Advance Paid',
+      advancePaid:       payAmount,
       totalPrice,
-      balanceDue:        balanceAmount,
+      balanceDue:        isFullPay ? 0 : balanceAmount,
       customerName:      user.name,
       phone:             user.phone || '',
       email:             user.email,
@@ -88,7 +91,7 @@ const BookingConfirmation = () => {
           </button>
           <div>
             <h1 className="text-lg font-bold">Confirm Booking</h1>
-            <p className="text-emerald-100 text-xs">Review and proceed to payment</p>
+            <p className="text-white/70 text-xs">Review and proceed to payment</p>
           </div>
         </div>
       </header>
@@ -170,17 +173,54 @@ const BookingConfirmation = () => {
               <span className="font-semibold text-orange-500">{formatPrice(balanceAmount)}</span>
             </div>
 
+            {/* Payment Mode Toggle */}
+            <div className="mt-3">
+              <p className="text-xs text-gray-500 mb-2 font-medium">Choose payment option:</p>
+              <div className="flex rounded-xl overflow-hidden border border-gray-200">
+                <button
+                  onClick={() => setPaymentMode('advance')}
+                  className={`flex-1 py-2.5 text-sm font-semibold transition-all ${
+                    paymentMode === 'advance'
+                      ? 'bg-green-800 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  Advance 30%
+                </button>
+                <button
+                  onClick={() => setPaymentMode('full')}
+                  className={`flex-1 py-2.5 text-sm font-semibold transition-all ${
+                    paymentMode === 'full'
+                      ? 'bg-green-800 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  Full Payment
+                </button>
+              </div>
+            </div>
+
             {/* Pay Now Banner */}
-            <div className="rounded-2xl overflow-hidden mt-2" style={{ background: 'linear-gradient(135deg, #064e3b, #059669)' }}>
+            <div className="rounded-2xl overflow-hidden mt-3" style={{ background: 'linear-gradient(135deg, #14532d, #166534)' }}>
               <div className="px-5 py-4 flex items-center justify-between">
                 <div>
-                  <p className="text-emerald-200 text-xs">Pay Now (Advance)</p>
-                  <p className="text-white font-extrabold text-2xl">{formatPrice(advanceAmount)}</p>
+                  <p className="text-white/70 text-xs">
+                    {paymentMode === 'full' ? 'Full Payment' : 'Pay Now (Advance 30%)'}
+                  </p>
+                  <p className="text-white font-extrabold text-2xl">{formatPrice(payAmount)}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-emerald-200 text-xs">Balance at venue</p>
-                  <p className="text-white font-bold">{formatPrice(balanceAmount)}</p>
-                </div>
+                {paymentMode === 'advance' && (
+                  <div className="text-right">
+                    <p className="text-white/70 text-xs">Balance at venue</p>
+                    <p className="text-white font-bold">{formatPrice(balanceAmount)}</p>
+                  </div>
+                )}
+                {paymentMode === 'full' && (
+                  <div className="text-right">
+                    <p className="text-white/70 text-xs">Nothing due</p>
+                    <p className="text-white font-bold">at venue</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -240,7 +280,7 @@ const BookingConfirmation = () => {
           }`}
         >
           {agreeToTerms
-            ? `Proceed to Payment · ${formatPrice(advanceAmount)}`
+            ? `Proceed to Payment · ${formatPrice(payAmount)}`
             : 'Accept cancellation policy to continue'}
         </button>
       </div>
@@ -249,8 +289,9 @@ const BookingConfirmation = () => {
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        amount={advanceAmount}
+        amount={payAmount}
         totalAmount={totalPrice}
+        isFullPayment={paymentMode === 'full'}
         userName={user.name}
         userEmail={user.email}
         userPhone={user.phone}

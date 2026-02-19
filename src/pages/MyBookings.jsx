@@ -35,7 +35,7 @@ const MyBookings = () => {
       <header className="header-gradient text-white sticky top-0 z-10 shadow-lg">
         <div className="container mx-auto px-4 py-5">
           <h1 className="text-2xl font-extrabold">My Bookings</h1>
-          <p className="text-emerald-200 text-xs mt-0.5">Manage your turf reservations</p>
+          <p className="text-white/70 text-xs mt-0.5">Manage your turf reservations</p>
         </div>
       </header>
 

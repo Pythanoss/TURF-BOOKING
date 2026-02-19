@@ -10,6 +10,7 @@ const PaymentModal = ({
   onClose,
   amount,
   totalAmount,
+  isFullPayment = false,
   userName,
   userEmail,
   userPhone,
@@ -47,7 +48,7 @@ const PaymentModal = ({
         booking_description: bookingDescription,
       },
       theme: {
-        color: '#059669',
+        color: '#166534',
       },
       modal: {
         ondismiss: function () {
@@ -109,14 +110,19 @@ const PaymentModal = ({
           {/* Amount banner */}
           <div
             className="rounded-2xl p-5 mb-5 text-center"
-            style={{ background: 'linear-gradient(135deg, #064e3b, #059669)' }}
+            style={{ background: 'linear-gradient(135deg, #14532d, #166534)' }}
           >
-            <p className="text-emerald-200 text-xs mb-1 font-medium">ADVANCE TO PAY NOW (30%)</p>
+            <p className="text-white/70 text-xs mb-1 font-medium uppercase tracking-wide">
+              {isFullPayment ? 'Full Payment' : 'Advance to Pay Now (30%)'}
+            </p>
             <p className="text-white text-4xl font-extrabold">{formatPrice(amount)}</p>
-            {totalAmount && totalAmount !== amount && (
-              <p className="text-emerald-200 text-xs mt-2">
+            {!isFullPayment && totalAmount && totalAmount !== amount && (
+              <p className="text-white/70 text-xs mt-2">
                 Total: {formatPrice(totalAmount)} · Remaining paid at venue
               </p>
+            )}
+            {isFullPayment && (
+              <p className="text-white/70 text-xs mt-2">Nothing due at the venue</p>
             )}
           </div>
 

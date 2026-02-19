@@ -1,11 +1,13 @@
 // Time slots from 7 AM to 1 AM (18 slots, 1 hour each).
 // Slot status is now driven by the `bookedHours` array fetched from Supabase
 // via the `get_booked_hours(check_date)` RPC function.
-// The `generateTimeSlots` / `getSlotGroups` functions are pure (no DB calls here).
+// Prices are stored in localStorage via slotPrices util (editable by admin).
+
+import { getSlotPrices } from '../utils/slotPrices';
 
 const SLOT_HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0];
 
-const formatHour = (hour) => {
+export const formatHour = (hour) => {
   if (hour === 0)  return '12:00 AM';
   if (hour === 12) return '12:00 PM';
   if (hour < 12)   return `${hour}:00 AM`;
@@ -13,10 +15,8 @@ const formatHour = (hour) => {
 };
 
 const getSlotPrice = (hour) => {
-  if (hour >= 7  && hour < 10) return 800;   // Morning
-  if (hour >= 10 && hour < 17) return 1000;  // Afternoon
-  if (hour >= 17 && hour < 22) return 1200;  // Peak evening
-  return 1000;                               // Late night (10 PM – 1 AM)
+  const prices = getSlotPrices();
+  return prices[hour] ?? 1000;
 };
 
 /**

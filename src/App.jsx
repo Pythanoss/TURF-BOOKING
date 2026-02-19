@@ -60,11 +60,10 @@ function App() {
             />
 
             {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/login"     element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/bookings" element={<AdminDashboard />} />
-            <Route path="/admin/revenue" element={<AdminDashboard />} />
-            <Route path="/admin/slots" element={<AdminDashboard />} />
+            <Route path="/admin/bookings"  element={<AdminDashboard />} />
+            <Route path="/admin/slots"     element={<AdminDashboard />} />
 
             {/* Catch all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

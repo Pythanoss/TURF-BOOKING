@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, DollarSign, Clock, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, Clock, LogOut } from 'lucide-react';
 
 const AdminSidebar = () => {
   const location = useLocation();
@@ -7,9 +7,8 @@ const AdminSidebar = () => {
 
   const menuItems = [
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/admin/bookings', icon: Calendar, label: 'Bookings' },
-    { path: '/admin/revenue', icon: DollarSign, label: 'Revenue' },
-    { path: '/admin/slots', icon: Clock, label: 'Slots' },
+    { path: '/admin/bookings',  icon: Calendar,        label: 'Bookings'  },
+    { path: '/admin/slots',     icon: Clock,           label: 'Slots'     },
   ];
 
   const handleLogout = () => {

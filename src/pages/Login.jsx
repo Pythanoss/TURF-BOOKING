@@ -32,7 +32,11 @@ const Login = () => {
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: 'linear-gradient(160deg, #022c22 0%, #064e3b 55%, #065f46 100%)' }}
+      style={{
+        backgroundImage: 'linear-gradient(rgba(5, 15, 8, 0.75), rgba(10, 25, 12, 0.80)), url("/green-grass-field-background.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
     >
       {/* Decorative circles */}
       <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10"
@@ -51,7 +55,7 @@ const Login = () => {
         </div>
 
         <h1 className="text-4xl font-extrabold text-white mb-2 tracking-tight">TurfBook</h1>
-        <p className="text-emerald-300 text-sm font-medium mb-1">Your premium turf booking platform</p>
+        <p className="text-white/70 text-sm font-medium mb-1">Your premium turf booking platform</p>
         <p className="text-emerald-400/60 text-xs">Book · Play · Repeat</p>
 
         {/* Feature pills */}
@@ -63,7 +67,7 @@ const Login = () => {
           ].map(f => (
             <div
               key={f.label}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-emerald-200 border border-white/10"
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white/80 border border-white/10"
               style={{ background: 'rgba(255,255,255,0.08)' }}
             >
               <span>{f.emoji}</span>
@@ -78,7 +82,7 @@ const Login = () => {
           style={{ background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(20px)' }}
         >
           <h2 className="text-white text-xl font-bold mb-1">Sign in to continue</h2>
-          <p className="text-emerald-300/80 text-sm mb-5">
+          <p className="text-white/60 text-sm mb-5">
             Access your bookings and manage slots
           </p>
 
@@ -96,7 +100,7 @@ const Login = () => {
           >
             {isLoading ? (
               <>
-                <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-green-700 border-t-transparent rounded-full animate-spin" />
                 <span>Signing in...</span>
               </>
             ) : (
@@ -113,7 +117,7 @@ const Login = () => {
             )}
           </button>
 
-          <p className="text-xs text-emerald-300/50 text-center mt-4">
+          <p className="text-xs text-white/40 text-center mt-4">
             By continuing, you agree to our Terms of Service and Privacy Policy
           </p>
         </div>
