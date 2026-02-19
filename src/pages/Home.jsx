@@ -207,25 +207,44 @@ const Home = () => {
                           isAvailable ? 'slot-available' : 'slot-closed'
                         }`}
                       >
-                        <div className="flex items-start justify-between mb-1">
-                          <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-white' : 'text-gray-800'}`}>
-                            {slot.startTime}
+                        {/* Time + status badge */}
+                        <div className="flex items-start justify-between gap-1 mb-1">
+                          <span className={`text-sm font-bold leading-tight ${isSelected ? 'text-white' : 'text-gray-800'}`}>
+                            {slot.startTime} – {slot.endTime}
                           </span>
-                          {isSelected && <CheckCircle2 size={14} className="text-white flex-shrink-0 -mt-0.5" />}
-                          {isBooked    && <span className="text-xs text-red-500 font-medium">Full</span>}
+                          {isSelected ? (
+                            <CheckCircle2 size={15} className="text-white flex-shrink-0 mt-0.5" />
+                          ) : isBooked ? (
+                            <span className="text-xs font-semibold text-red-600 flex-shrink-0">Booked</span>
+                          ) : isAvailable ? (
+                            <span className="text-xs font-semibold text-green-700 flex-shrink-0">Available</span>
+                          ) : (
+                            <span className="text-xs font-semibold text-gray-500 flex-shrink-0">Closed</span>
+                          )}
                         </div>
 
-                        <p className={`text-xs mb-2 ${isSelected ? 'text-emerald-100' : 'text-gray-400'}`}>
-                          to {slot.endTime}
+                        {/* Duration */}
+                        <p className={`text-xs mb-3 ${isSelected ? 'text-white/70' : 'text-gray-500'}`}>
+                          1 Hour Duration
                         </p>
 
-                        {isAvailable ? (
-                          <p className={`text-sm font-extrabold ${isSelected ? 'text-white' : 'text-emerald-600'}`}>
-                            {formatPrice(slot.price)}
-                          </p>
-                        ) : (
-                          <p className="text-xs font-medium text-red-400">Booked</p>
-                        )}
+                        {/* Price + note */}
+                        <div className="flex items-end justify-between">
+                          {isAvailable || isSelected ? (
+                            <>
+                              <p className={`text-base font-extrabold ${isSelected ? 'text-white' : 'text-emerald-600'}`}>
+                                {formatPrice(slot.price)}
+                              </p>
+                              <p className={`text-xs ${isSelected ? 'text-white/60' : 'text-gray-400'}`}>
+                                {isSelected ? '✓ Selected' : '30% advance'}
+                              </p>
+                            </>
+                          ) : isBooked ? (
+                            <p className="text-xs text-red-500 font-medium">This slot is already booked</p>
+                          ) : (
+                            <p className="text-xs text-gray-400">Slot not available</p>
+                          )}
+                        </div>
                       </button>
                     );
                   })}
