@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Sun, Sunrise, Sunset, Moon, CheckCircle2, ShoppingCart, X, RefreshCw } from 'lucide-react';
 import { addDays, format } from 'date-fns';
@@ -24,31 +24,49 @@ const Home = () => {
     selectedSlots, toggleSlotSelection, clearSelectedSlots, getTotalPrice, isSlotSelected,
   } = useBooking();
 
-  const [slotGroups, setSlotGroups] = useState(getSlotGroups(selectedDate, []));
-  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotGroups, setSlotGroups] = useState(() => getSlotGroups(selectedDate, []));
+  const [slotsLoading, setSlotsLoading] = useState(true);
 
   const today = getToday();
 
   // ─── Fetch real slot availability from Supabase ─────────────
-  const fetchBookedHours = useCallback(async (date) => {
+  // Cancellation flag prevents stale async updates when navigating away mid-fetch
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setSlotsLoading(true);
+      try {
+        const { data, error } = await supabase.rpc('get_booked_hours', { check_date: selectedDate });
+        if (cancelled) return;
+        if (error) throw error;
+        setSlotGroups(getSlotGroups(selectedDate, (data || []).map(r => r.start_hour)));
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to fetch slot availability:', err);
+        setSlotGroups(getSlotGroups(selectedDate, []));
+      } finally {
+        if (!cancelled) setSlotsLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [selectedDate]);
+
+  const handleRefresh = async () => {
     setSlotsLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_booked_hours', { check_date: date });
+      const { data, error } = await supabase.rpc('get_booked_hours', { check_date: selectedDate });
       if (error) throw error;
-      const bookedHours = (data || []).map(row => row.start_hour);
-      setSlotGroups(getSlotGroups(date, bookedHours));
+      setSlotGroups(getSlotGroups(selectedDate, (data || []).map(r => r.start_hour)));
     } catch (err) {
       console.error('Failed to fetch slot availability:', err);
-      // Graceful fallback — show all slots as available
-      setSlotGroups(getSlotGroups(date, []));
+      setSlotGroups(getSlotGroups(selectedDate, []));
     } finally {
       setSlotsLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchBookedHours(selectedDate);
-  }, [selectedDate, fetchBookedHours]);
+  };
 
   // ─── Date selection ──────────────────────────────────────────
   const quickDates = [
@@ -144,7 +162,7 @@ const Home = () => {
 
         {/* Refresh button */}
         <button
-          onClick={() => fetchBookedHours(selectedDate)}
+          onClick={handleRefresh}
           disabled={slotsLoading}
           className="p-1.5 text-gray-400 hover:text-emerald-600 transition-colors"
           title="Refresh availability"
